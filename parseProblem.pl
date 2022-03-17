@@ -1,24 +1,3 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%  parseDomain.pl
-%%  Simple parser of PDDL domain file into prolog syntax.
-%%  Author: Robert Sasak, Charles University in Prague
-%%
-%%  Example:
-%%      ?-parseProblem('problem.pddl', O).
-%%      O = problem('blocks-4-0',								% name
-%%    			blocks,											% domain name
-%%          _G1443,                            					% require definition
-%%          [block(d, b, a, c)],								% object declaration
-%%          [clear(c), clear(a), clear(b), clear(d), ontable(c),% initial state
-%%          	ontable(a), ontable(b), ontable(d), handempty,
-%%          	set('total-cost', 0)],
-%%          [on(d, c), on(c, b), on(b, a)],						% goal
-%%          _G1447,												% constraints, not implemented
-%%          metric(minimize, 'total-cost'),				        % metric
-%%          _G1449									            % length_specification, not implemented
-%%      )
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %% parse_problem(+File, -Output).
 % parses PDDL problem File and turns it into re-written Prolog syntax
 parse_problem(F, O) :- parseProblem(F, O, []).

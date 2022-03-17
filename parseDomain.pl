@@ -1,27 +1,3 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%  parseDomain.pl
-%%  Simple parser of PDDL domain file into prolog syntax.
-%%  Author: Robert Sasak, Charles University in Prague
-%%
-%%  Example:
-%%  ?-parseDomain('blocks_world.pddl', O).
-%%      O = domain(blocks,
-%%          [strips, typing, 'action-costs'],
-%%          [block],
-%%          _G4108,
-%%          [on(block(?x), block(?y)), ontable(block(?x)),
-%%	         clear(block(?x)), handempty, holding(block(?x))],
-%%          [number(f('total-cost', []))],
-%%          _G4108,
-%%          [action('pick-up', [block(?x)],       %parameters
-%%		        [clear(?x), ontable(?x), handempty], %preconditions
-%%              [holding(?x)],                       %positiv effects
-%%          [ontable(?x), clear(?x), handempty], %negativ effects
-%%          [increase('total-cost', 2)]),        %numeric effects
-%%          ...],
-%%      ...)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %% parseDomain(+File, -Output).
 % parses PDDL domain File and turns it into re-written Prolog syntax
 parse_domain(F, O) :- parseDomain(F, O, []).

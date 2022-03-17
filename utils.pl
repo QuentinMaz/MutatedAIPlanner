@@ -13,9 +13,6 @@ generate_action(Action) :-
     member(ActionPDDL, As),
     copy_pddl_terms(ActionPDDL, Action).
 
-% Special version of copy_term. variable x represented as ?(x)
-% All occurs of ?(x) are replaced with real prolog variables.
-% Modified version of code published by Bartak: http://kti.mff.cuni.cz/~bartak/prolog/data_struct.html
 copy_pddl_terms(A, B) :- copy_pddl_terms(A, [], B, _).
 
 copy_pddl_terms(A, Vars, A, Vars) :-
