@@ -1,14 +1,15 @@
 :- use_module(library(plunit)).
 :- use_module(library(timeout), [time_out/3]).
 
-:- [readFile, parseDomain, parseProblem].
-:- [state_space_searches, search_algorithms, utils, blackboard_data].
+:- ensure_loaded(main).
+:- ensure_loaded(blackboard_data).
+:- ensure_loaded(utils).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% TESTS FILES
+%% INPUTS PREDICATES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-complex_problem('test/blocks/domain.pddl', 'test/blocks/blocks5.pddl').
+complex_problem('test/blocks/domain.pddl', 'test/blocks/blocks4.pddl').
 complex_problem('test/monkey/domain.pddl', 'test/monkey/monkey2.pddl').
 complex_problem('test/complex_rover/domain.pddl', 'test/complex_rover/complex_rover1.pddl').
 complex_problem('test/hanoi/domain.pddl', 'test/hanoi/hanoi3.pddl').
@@ -34,218 +35,78 @@ light_problem('test/simple_rover/domain.pddl', 'test/simple_rover/simple_rover1.
 light_problem('test/airport/domain1.pddl', 'test/airport/airport1.pddl').
 light_problem('test/airport/domain2.pddl', 'test/airport/airport2.pddl').
 
+heuristic(h_distance_with_i).
+heuristic(h_distance_with_g).
+heuristic(h_diff).
+heuristic(h_state_length).
+heuristic(h_max).
+heuristic(h_nb_actions).
+
+mutated_search(f1).
+mutated_search(f2).
+mutated_search(f3).
+mutated_search(f4).
+mutated_search(f5).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% TESTING HELPERS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% forward validation
-validate_fwd_bfs(DomainFile, ProblemFile) :-
-    validate_problem(DomainFile, ProblemFile, forward, bfs).
-
-validate_fwd_dfs(DomainFile, ProblemFile) :-
-    validate_problem(DomainFile, ProblemFile, forward, dfs).
-
-validate_fwd_iddfs(DomainFile, ProblemFile) :-
-    validate_problem(DomainFile, ProblemFile, forward, iddfs).
-
-validate_fwd_dfs_first_solution(DomainFile, ProblemFile) :-
-    validate_problem(DomainFile, ProblemFile, forward, dfs_first_solution).
-
-validate_fwd_dfs_longer_solution(DomainFile, ProblemFile) :-
-    validate_problem(DomainFile, ProblemFile, forward, dfs_longer_solution).
-
-validate_fwd_a_star(DomainFile, ProblemFile) :-
-    set_heuristic(h_0),
-    validate_problem(DomainFile, ProblemFile, forward, a_star).
-
-validate_fwd_a_star_h_plus(DomainFile, ProblemFile) :-
-    set_heuristic(h_plus),
-    validate_problem(DomainFile, ProblemFile, forward, a_star).
-
-validate_fwd_a_star_h_diff(DomainFile, ProblemFile) :-
-    set_heuristic(h_diff),
-    validate_problem(DomainFile, ProblemFile, forward, a_star).
-
-validate_fwd_a_star_h_add(DomainFile, ProblemFile) :-
-    set_heuristic(h_add),
-    validate_problem(DomainFile, ProblemFile, forward, a_star).
-
-validate_fwd_a_star_mutant1(DomainFile, ProblemFile) :-
-    set_heuristic(h_diff),
-    validate_problem(DomainFile, ProblemFile, forward, a_star_mutant1).
-
-validate_fwd_a_star_mutant2(DomainFile, ProblemFile) :-
-    set_heuristic(h_diff),
-    validate_problem(DomainFile, ProblemFile, forward, a_star_mutant2).
-
-validate_problem(DomainFile, ProblemFile, StateSpaceSearch, SearchAlgorithm) :-
-    make_input(DomainFile, ProblemFile, Domain-Problem),
+validate_blind_search(DomainFile, ProblemFile, BlindSearchAlgorithm) :-
+    make_input(DomainFile, ProblemFile, _Domain, Problem),
     !,
-    time_out(solve(Domain, Problem, StateSpaceSearch, SearchAlgorithm, Plan), 30000, _),
-    check_plan_validity(Problem, Plan).
+    time_out(solve_problem(Problem, BlindSearchAlgorithm, Plan), 30000, _),
+    validate_plan(Problem, Plan).
 
-%% backward validation
-validate_bwd_bfs(DomainFile, ProblemFile) :-
-    validate_problem(DomainFile, ProblemFile, backward, bfs).
-
-validate_bwd_dfs(DomainFile, ProblemFile) :-
-    validate_problem(DomainFile, ProblemFile, backward, dfs).
-
-%% solve(+Domain, +Problem, +StateSpaceSearch, +SearchAlgorithm, -Solution).
-solve(D, P, StateSpaceSearch, SearchAlgorithm, Solution) :-
-    set_blackboard(D, P, StateSpaceSearch, SearchAlgorithm),
-    initialise_start_state(StateSpaceSearch, StartState),
-    search(SearchAlgorithm, StartState, Solution).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% PLUNIT TESTS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+validate_informed_search(DomainFile, ProblemFile, SearchAlgorithm, Heuristic) :-
+    make_input(DomainFile, ProblemFile, _Domain, Problem),
+    !,
+    set_heuristic(Heuristic),
+    time_out(solve_problem(Problem, SearchAlgorithm, Plan), 30000, _),
+    validate_plan(Problem, Plan).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% BFS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% FORWARD BFS
-:- begin_tests(forward_bfs).
+:- begin_tests(bfs).
 
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_bfs(Domain, Problem).
+test(bfs_light_problems, [nondet, forall(light_problem(DomainFile, ProblemFile))]) :-
+    validate_blind_search(DomainFile, ProblemFile, bfs).
 
-:- end_tests(forward_bfs).
+test(bfs_complex_problems, [nondet, forall(complex_problem(DomainFile, ProblemFile))]) :-
+    validate_blind_search(DomainFile, ProblemFile, bfs).
 
-:- begin_tests(backward_bfs, [blocked(backward_testing_is_too_long)]).
+:- end_tests(bfs).
 
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_bwd_bfs(Domain, Problem).
-
-:- end_tests(backward_bfs).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% DFS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% FORWARD DFS
-:- begin_tests(forward_dfs).
-
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_dfs(Domain, Problem).
-
-:- end_tests(forward_dfs).
-
-:- begin_tests(backward_dfs, [blocked(backward_testing_is_too_long)]).
-
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_bwd_dfs(Domain, Problem).
-
-:- end_tests(backward_dfs).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% IDDFS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% FORWARD IDDFS
-:- begin_tests(forward_iddfs).
-
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_iddfs(Domain, Problem).
-
-:- end_tests(forward_iddfs).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% DFS_FIRST_SOLUTION
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% FORWARD DFS_FIRST_SOLUTION
-:- begin_tests(forward_dfs_first_solution).
-
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_dfs_first_solution(Domain, Problem).
-
-:- end_tests(forward_dfs_first_solution).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% DFS_LONGER_SOLUTION
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% FORWARD DFS_LONGER_SOLUTION
-:- begin_tests(forward_dfs_longer_solution).
-
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_dfs_longer_solution(Domain, Problem).
-
-:- end_tests(forward_dfs_longer_solution).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% A_STAR
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% FORWARD A_STAR
-:- begin_tests(forward_a_star).
+:- begin_tests(astar).
 
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_a_star(Domain, Problem).
+test(astar_light_problems, [nondet, forall(light_problem(DomainFile, ProblemFile))]) :-
+    validate_informed_search(DomainFile, ProblemFile, astar, h_zero).
 
-:- end_tests(forward_a_star).
+test(astar_complex_problems, [nondet, forall(complex_problem(DomainFile, ProblemFile))]) :-
+    validate_informed_search(DomainFile, ProblemFile, astar, h_zero).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% A_STAR_H_PLUS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:- end_tests(astar).
 
-%% FORWARD A_STAR_H_PLUS
-:- begin_tests(forward_a_star_h_plus).
-
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_a_star_h_plus(Domain, Problem).
-
-:- end_tests(forward_a_star_h_plus).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% A_STAR_H_DIFF
+%% MUTANTS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% FORWARD A_STAR_H_DIFF
-:- begin_tests(forward_a_star_h_diff).
+:- begin_tests(mutants).
 
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_a_star_h_diff(Domain, Problem).
+test(mutant_light_problems, [nondet, forall((light_problem(DomainFile, ProblemFile), mutated_search(MutatedSearch), heuristic(Heuristic)))]) :-
+    atom_concat('mutated_astar-', MutatedSearch, Search),
+    validate_informed_search(DomainFile, ProblemFile, Search, Heuristic).
 
-:- end_tests(forward_a_star_h_diff).
+test(mutant_complex_problems, [nondet, forall((complex_problem(DomainFile, ProblemFile), mutated_search(MutatedSearch), heuristic(Heuristic)))]) :-
+    atom_concat('mutated_astar-', MutatedSearch, Search),
+    validate_informed_search(DomainFile, ProblemFile, Search, Heuristic).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% A_STAR_H_ADD
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% FORWARD A_STAR_H_ADD
-:- begin_tests(forward_a_star_h_add).
-
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_a_star_h_add(Domain, Problem).
-
-:- end_tests(forward_a_star_h_add).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% A_STAR_MUTANT1
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% FORWARD A_STAR_MUTANT1
-:- begin_tests(forward_a_star_mutant1).
-
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_a_star_mutant1(Domain, Problem).
-
-:- end_tests(forward_a_star_mutant1).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% A_STAR_MUTANT2
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% FORWARD A_STAR_MUTANT2
-:- begin_tests(forward_a_star_mutant2).
-
-test(light_problems, [nondet, forall(light_problem(Domain, Problem))]) :-
-    validate_fwd_a_star_mutant2(Domain, Problem).
-
-test(complex_problems, [nondet, forall(complex_problem(Domain, Problem))]) :-
-    validate_fwd_a_star_mutant2(Domain, Problem).
-
-:- end_tests(forward_a_star_mutant2).
+:- end_tests(mutants).

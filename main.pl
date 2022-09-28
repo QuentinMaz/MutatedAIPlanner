@@ -1,125 +1,15 @@
+:- module(main, [run_problem/5, make_input/4, solve_problem/4, solve_problem/3, start/0]).
+
 :- use_module(library(timeout), [time_out/3]).
+:- use_module(library(lists), [maplist/3]).
 
-:- [blackboard_data, pddl_serialiser, search_algorithms, utils].
-
-test :-
-    prolog_flag(argv, [D, P]),
-    write('BFS                  :\n'), solve_fwd_bfs(D, P),
-    write('A*_PLUS              :\n'), solve_fwd_a_star_h_plus(D, P),
-    write('DFS_FIRST_SOLUTION   :\n'), solve_fwd_dfs_first_solution(D, P),
-    write('DFS                  :\n'), solve_fwd_dfs(D, P),
-    write('IDDFS                :\n'), solve_fwd_iddfs(D, P),
-    write('DFS_LONGER_SOLUTION  :\n'), solve_fwd_dfs_longer_solution(D, P),
-    write('A*_0                 :\n'), solve_fwd_a_star(D, P),
-    write('A*_DIFF              :\n'), solve_fwd_a_star_h_diff(D, P),
-    write('A*_ADD               :\n'), solve_fwd_a_star_h_add(D, P),
-    write('A*_MUTANT1             :\n'), solve_fwd_a_star_mutant1(D, P),
-    write('A*_MUTANT2             :\n'), solve_fwd_a_star_mutant2(D, P),
-    write('A*_MUTANT3             :\n'), solve_fwd_a_star_mutant3(D, P),
-    halt.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% SOLVING PREDICATES (runs a configuration and writes statistics)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-solve_fwd_bfs(DomainFilename, ProblemFilename) :-
-    solve_problem(DomainFilename, ProblemFilename, forward, bfs).
-
-solve_fwd_dfs(DomainFilename, ProblemFilename) :-
-    solve_problem(DomainFilename, ProblemFilename, forward, dfs).
-
-solve_fwd_iddfs(DomainFilename, ProblemFilename) :-
-    solve_problem(DomainFilename, ProblemFilename, forward, iddfs).
-
-solve_fwd_dfs_first_solution(DomainFilename, ProblemFilename) :-
-    solve_problem(DomainFilename, ProblemFilename, forward, dfs_first_solution).
-
-solve_fwd_dfs_longer_solution(DomainFilename, ProblemFilename) :-
-    solve_problem(DomainFilename, ProblemFilename, forward, dfs_longer_solution).
-
-solve_fwd_a_star(DomainFilename, ProblemFilename) :-
-    set_heuristic(h_0),
-    solve_problem(DomainFilename, ProblemFilename, forward, a_star).
-
-solve_fwd_a_star_h_plus(DomainFilename, ProblemFilename) :-
-    set_heuristic(h_plus),
-    solve_problem(DomainFilename, ProblemFilename, forward, a_star).
-
-solve_fwd_a_star_h_diff(DomainFilename, ProblemFilename) :-
-    set_heuristic(h_diff),
-    solve_problem(DomainFilename, ProblemFilename, forward, a_star).
-
-solve_fwd_a_star_h_add(DomainFilename, ProblemFilename) :-
-    set_heuristic(h_add),
-    solve_problem(DomainFilename, ProblemFilename, forward, a_star).
-
-solve_fwd_a_star_mutant1(DomainFilename, ProblemFilename) :-
-    set_heuristic(h_add),
-    solve_problem(DomainFilename, ProblemFilename, forward, a_star_mutant1).
-
-solve_fwd_a_star_mutant2(DomainFilename, ProblemFilename) :-
-    set_heuristic(h_diff),
-    solve_problem(DomainFilename, ProblemFilename, forward, a_star_mutant2).
-
-solve_fwd_a_star_mutant3(DomainFilename, ProblemFilename) :-
-    set_heuristic(h_diff),
-    solve_problem(DomainFilename, ProblemFilename, forward, a_star_mutant3).
-
-solve_bwd_bfs(DomainFilename, ProblemFilename) :-
-    solve_problem(DomainFilename, ProblemFilename, backward, bfs).
-
-solve_bwd_dfs(DomainFilename, ProblemFilename) :-
-    solve_problem(DomainFilename, ProblemFilename, backward, dfs).
-
-%% solve_problem(+DomainFilename, +ProblemFilename, +StateSpaceSearch, +SearchAlgorithm).
-% reads files and sets timelimit for planner
-solve_problem(DomainFilename, ProblemFilename, StateSpaceSearch, SearchAlgorithm) :-
-    make_input(DomainFilename, ProblemFilename, Domain-Problem),
-    start_time,
-    !,
-    time_out(solve(Domain, Problem, StateSpaceSearch, SearchAlgorithm, Plan), 60000, _),
-    print_statistic(Problem, Plan),
-    writeq(Plan), nl,
-    (check_plan_validity(Problem, Plan) -> true ; write('plan not valid\n')).
-
-%% solve(+Domain, +Problem, +StateSpaceSearch, +SearchAlgorithm, -Solution).
-solve(Domain, Problem, StateSpaceSearch, SearchAlgorithm, Solution) :-
-    set_blackboard(Domain, Problem, StateSpaceSearch, SearchAlgorithm),
-    initialise_start_state(StateSpaceSearch, StartState),
-    search(SearchAlgorithm, StartState, Solution).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% STATISTICS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-start_time :-
-    statistics(runtime, [Time, _]),
-    bb_put(start_time, Time).
-
-get_start_time(Time) :-
-    bb_get(start_time, Time).
-
-%% print_statistic(+Problem, +Plan).
-print_statistic(Problem, Plan) :-
-    problem_name(Problem, Name),
-    get_start_time(StartTime),
-    statistics(runtime, [CurrentTime, _]),
-    statistics(memory, [Memory, _]),
-    Time is CurrentTime - StartTime,
-    length(Plan, PlanLength),
-    format('~a ~3d ~d ~d\n', [Name, Time, Memory, PlanLength]).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% RUNNING PREDICATE (runs a configuration and writes the solution)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-run_problem(DomainFilename, ProblemFilename, ResultFilename, StateSpaceSearch, SearchAlgorithm, Heuristic) :-
-    make_input(DomainFilename, ProblemFilename, Domain-Problem),
-    !,
-    set_heuristic(Heuristic),
-    time_out(solve(Domain, Problem, StateSpaceSearch, SearchAlgorithm, Plan), 30000, _),
-    (check_plan_validity(Problem, Plan) ; true),
-    serialise_plan(Plan, ResultFilename).
+:- ensure_loaded(blackboard_data).
+:- ensure_loaded(domain).
+:- ensure_loaded(problem).
+:- ensure_loaded(pddl_parser).
+:- ensure_loaded(pddl_serialiser).
+:- ensure_loaded(searches).
+:- ensure_loaded(utils).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STARTING PREDICATE
@@ -129,6 +19,80 @@ user:runtime_entry(start) :-
     start.
 
 start :-
-    prolog_flag(argv, [StateSpaceSearch, SearchAlgorithm, Heuristic, DomainFilename, ProblemFilename, ResultFilename]),
-    %% TODO : check the inputs... (# security concerns)
-    run_problem(DomainFilename, ProblemFilename, ResultFilename, StateSpaceSearch, SearchAlgorithm, Heuristic).
+    prolog_flag(argv, [SearchAlgorithm, Heuristic, DomainFilename, ProblemFilename, ResultFilename]),
+    !,
+    run_problem(DomainFilename, ProblemFilename, ResultFilename, SearchAlgorithm, Heuristic).
+start :-
+    prolog_flag(argv, [SearchAlgorithm, Heuristic, DomainFilename, ProblemFilename]),
+    solve_problem(DomainFilename, ProblemFilename, SearchAlgorithm, Heuristic).
+
+%% run_problem(+DomainFilename, +ProblemFilename, +ResultFilename, +SearchAlgorithm, +Heuristic).
+% reads and parses input files; solves the planning problem, checks the validity of the result and exports it anyway.
+run_problem(DomainFilename, ProblemFilename, ResultFilename, SearchAlgorithm, Heuristic) :-
+    make_input(DomainFilename, ProblemFilename, _Domain, Problem),
+    !,
+    set_heuristic(Heuristic),
+    time_out(solve_problem(Problem, SearchAlgorithm, Plan), 120000, _),
+    (validate_plan(Problem, Plan) ; true),
+    maplist(untyped_action, Plan, UntypedPlan),
+    serialise_plan(UntypedPlan, ResultFilename).
+
+%% solve_problem(+DomainFilename, +ProblemFilename, +SearchAlgorithm, +Heuristic).
+% reads and parses input files; solves the planning problem and checks the validity of the result.
+solve_problem(DomainFilename, ProblemFilename, SearchAlgorithm, Heuristic) :-
+    start_time,
+    make_input(DomainFilename, ProblemFilename, _Domain, Problem),
+    save_input_process_time,
+    !,
+    set_heuristic(Heuristic),
+    time_out(solve_problem(Problem, SearchAlgorithm, Plan), 120000, _),
+    print_statistic,
+    (validate_plan(Problem, Plan) -> true ; write('plan not valid\n')).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% HELPERS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% make_input(+DomainFilename, +ProblemFilename, -Domain, -Problem).
+make_input(DomainFilename, ProblemFilename, Domain, Problem) :-
+    parse_domain(DomainFilename, Domain),
+    parse_problem(ProblemFilename, TmpProblem),
+    sort_problem(TmpProblem, Problem),
+    set_blackboard(Domain, Problem),
+    ground_predicates(Domain, Problem, RigidPredicatesNames, RigidFacts),
+    % length(RigidFacts, LRF), format('~d ground rigid facts found.\n', [LRF]),
+    ground_actions(RigidPredicatesNames, RigidFacts, Operators),
+    % length(Operators, LO), format('~d ground actions found.\n', [LO]),
+    set_operators(Operators).
+
+%% solve_problem(+Problem, +SearchAlgorithm, -Solution).
+solve_problem(Problem, SearchAlgorithm, Solution) :-
+    problem_initial_state(Problem, InitialState),
+    search(SearchAlgorithm, InitialState, Solution).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% STATISTICS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+start_time :-
+    statistics(runtime, [Time, _]),
+    bb_put(start_time, Time).
+
+save_input_process_time :-
+    statistics(runtime, [Time, _]),
+    get_start_time(StartTime),
+    InputProcessTime is Time - StartTime,
+    bb_put(input_process_time, InputProcessTime),
+    start_time.
+
+get_start_time(Time) :-
+    bb_get(start_time, Time).
+
+print_statistic :-
+    statistics(runtime, [CurrentTime, _]),
+    get_start_time(StartTime),
+    SearchTime is CurrentTime - StartTime,
+    bb_get(input_process_time, InputProcessTime),
+    statistics(memory, [M, _]),
+    Memory is M / 1048576,
+    format('search time: ~3ds (input processing time: ~3ds); memory used: ~dMB.\n', [SearchTime, InputProcessTime, Memory]).
