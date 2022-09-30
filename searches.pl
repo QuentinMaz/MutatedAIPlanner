@@ -151,7 +151,7 @@ mutated_astar(PQ, _, _, []) :-
     empty_heap(PQ),
     !.
 mutated_astar(PQ, V, _, Solution) :-
-    get_from_heap(PQ, _, SR, _),
+    get_from_heap(PQ, _K, SR, _), % write(K), nl,
     state_record(State, _, _, _, SR),
     get_problem(Problem),
     problem_goal_state(Problem, GoalState),
@@ -291,3 +291,8 @@ f(f5, _, _, Depth, H, F) :-
     !,
     % #TODO: improve arithmetics
     F is integer((-1 ** (Depth mod 2)) * H).
+% combination of f4 and f5
+f(f6, _, _, Depth, H, F) :-
+    !,
+    % #TODO: improve arithmetics
+    F is -Depth + integer((-1 ** (Depth mod 2)) * H).

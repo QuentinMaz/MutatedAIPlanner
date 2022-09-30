@@ -127,7 +127,18 @@ def remove_configurations(df: pd.DataFrame, configurations: list[tuple[str, str]
     return pd.concat(dfs, ignore_index=True)
 
 
-def filter_dataframe(df: pd.DataFrame, configurations: list[tuple[str, str]], threshold: float) -> tuple[pd.DataFrame, list[tuple[str, str]]]:
+def uniform_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Retuns a dataframe reduced to problems passed by all configurations.
+    """
+    problems = df['problem'].unique().tolist()
+    n = len(compute_configurations(df))
+    problems_with_missing_data = [p for p in problems if len(df.loc[df.problem==p]) != n]
+    print(f'{len(problems_with_missing_data)} problems with missing data found.')
+    df = df.loc[~df.problem.isin(problems_with_missing_data)]
+    return df
+
+def filter_dataframe(df: pd.DataFrame, configurations: list[tuple[str, str]], threshold: float) -> tuple[pd.DataFrame, list[tuple[str, str], list[tuple[str, str]]]]:
     """
     Returns a dataframe with only the configurations that are mutated enough (given the threshold input)
     """
@@ -140,7 +151,7 @@ def filter_dataframe(df: pd.DataFrame, configurations: list[tuple[str, str]], th
         else:
             filtered_configurations.append((s, h))
     print(f'{len(valid_configurations)} configurations left after filtration ({threshold}%).')
-    return remove_configurations(df, filtered_configurations), valid_configurations
+    return remove_configurations(df, filtered_configurations), valid_configurations, filtered_configurations
 
 
 def filter_dataframe_strict(df: pd.DataFrame) -> pd.DataFrame:
@@ -244,6 +255,7 @@ def all_elements(list1, list2) -> bool:
     return result
 
 
+# TODO: to fix !
 def select_problems(df: pd.DataFrame, configurations: list[tuple[str, str]], target: int) -> dict[int, tuple[list[tuple[str, str]], list[str]]]:
     """
     Function that returns a set of (configurations, problems), indexed by the number of configurations (higher or equal to the target), and for which
@@ -297,17 +309,62 @@ def select_problems(df: pd.DataFrame, configurations: list[tuple[str, str]], tar
     return results
 
 
+# TODO: to fix !
+def select_problems2(df: pd.DataFrame, configurations: list[tuple[str, str]], target: int) -> dict[int, tuple[list[tuple[str, str]], list[str]]]:
+    """
+    Function that returns a set of (configurations, problems), indexed by the number of configurations (higher or equal to the target), and for which
+    they are all non optimal on the associated problems. So, the tuples returned represents a good test bench for MT.
+    """
+    print(f'target is {target}.\t\t\t\t\t\t(dataframe length is {len(df)})')
+    problems = [p for p in df['problem'].unique().tolist() if len(df.loc[(df.problem==p) & (df.is_non_optimal==1)]) >= target]
+    df = df.loc[(df.problem.isin(problems)) & (df.is_non_optimal==1)]
+    print(f'{len(problems)} problems that satisfies the target found.\t\t(dataframe length is now {len(df)})')
+    configuration_mut_scores = [len(df.loc[(df.search==s) & (df.heuristic==h)]['problem'].unique().tolist()) for (s, h) in configurations]
+    configs = []
+    for i in range(len(configurations)):
+        if configuration_mut_scores[i] >= target:
+            configs.append(configurations[i])
+    df = pd.concat([df.loc[(df.search==s) & (df.heuristic==h)] for (s, h) in configs], ignore_index=True)
+    print(f'{len(configs)} configurations that satisfies the target found.\t(dataframe length is now {len(df)})')
+    results = {}
+    for i in range(target, len(configs), 1):
+        best_i = 0
+        problems_i = []
+        config_i = []
+        sub_configs = [list(c) for c in combinations(configs, i)]
+        print(f'{len(sub_configs)} sub_configs of size {i} found.')
+        for sub_config in sub_configs:
+            tmp = pd.concat([df.loc[(df.search==s) & (df.heuristic==h)] for (s, h) in sub_config], ignore_index=True)
+            sub_problems = [p for p in problems if p not in results[i - 1][1]] if i != target else problems
+            tmp_problems = results[i - 1][1] if i != target else []
+            for p in sub_problems:
+                if len(tmp.loc[tmp.problem==p]) == len(sub_config):
+                    tmp_problems.append(p)
+            tmp_score = len(tmp_problems)
+            if  tmp_score == len(problems):
+                print('a sub_config that is valid for all problems has been found.')
+                return problems, sub_config
+            if tmp_score > best_i:
+                print(f'{tmp_score} problems covered.')
+                best_i = tmp_score
+                config_i = sub_config
+                problems_i = tmp_problems
+        results[i] = (config_i, problems_i)
+    return results
+
+
 # exec(open('results_helper.py').read())
 # reads the results and adds to the dataframe the oracle values
-df = pd.read_csv('plot4.csv', header=0)
-print(rank_configurations(df, compute_configurations(df)))
-print(df['problem'].unique().tolist())
-# add_oracle_results(df)
+df = pd.read_csv('fresults.csv', header=0)
+add_oracle_results(df)
 # retrieves from the dataframe the configurations
-# configurations = compute_configurations(df)
+configurations = compute_configurations(df)
 # filters the dataframe by considering only mutated enough configurations
-# df1, config1 = filter_dataframe(df, configurations, 50)
-# results = select_problems(df1, config1, 19)
+df1, config1, filtered_configs = filter_dataframe(df, configurations, 60)
+print(f'filtered configurations: {filtered_configs}')
+df1 = uniform_dataframe(df1)
+config1 = compute_configurations(df1)
+results = select_problems2(df1, config1, 18)
 ################### then it's up to me to decide which trade off to do and then export the dataframe ###################
 # result = results[20]
 # df2 = df1.loc[df1.problem.isin(result[1])]
@@ -316,3 +373,27 @@ print(df['problem'].unique().tolist())
 # plot_results_per_problem(df, 'fplot33.png')
 # plot_similarities(df2, result[0], 'plot4.png')
 # visualise(df1, config1, 'fplot60strict.png')
+
+# sub_problems = ['pegsol08', 'psr-small05', 'psr-small09', 'sokoban02', 'blocks09', 'miconic03', 'openstacks01', 'blocks06', 'pegsol09', 'satellite01', 'miconic04', 'miconic05', 'transport01', 'depot01', 'newspapers02', 'psr-small02', 'blocks01', 'blocks08', 'travel05', 'rovers02', 'pegsol06', 'tpp05', 'miconic02', 'psr-small06', 'psr-small07', 'tpp04', 'newspapers03', 'blocks07']
+# sub_configs = [('f2', 'hdiff'), ('f2', 'hlength'), ('f2', 'hnba'), ('f3', 'hlength'), ('f3', 'hi'), ('f3', 'hnba'), ('f4', 'hmax'), ('f4', 'hdiff'), ('f4', 'hlength'), ('f4', 'hi'), ('f4', 'hg'), ('f4', 'hnba'), ('f5', 'hdiff'), ('f5', 'hlength'), ('f5', 'hnba')]
+# sub_df = pd.concat([df.loc[(df.search==s) & (df.heuristic==h) & (df.is_non_optimal==1)] for (s, h) in sub_configs], ignore_index=True)
+# print(len(pd.concat([df.loc[(df.search==s) & (df.heuristic==h) & (df.is_non_optimal==1) & (df.problem.isin(sub_problems))] for (s, h) in sub_configs], ignore_index=True)))
+# for p in sub_problems:
+#     sub_df = df.loc[(df.problem==p) & (df.is_non_optimal==1)]
+#     non_optimal_configs_for_p = list(zip(sub_df['search'], sub_df['heuristic']))
+#     suspected_optimal_configs = [(s, h) for (s, h) in sub_configs if (s, h) not in non_optimal_configs_for_p]
+#     if suspected_optimal_configs != []:
+#         print(p, suspected_optimal_configs)
+
+# sub_problems2 = ['miconic02', 'psr-small05', 'psr-small09', 'sokoban02', 'blocks09', 'miconic03', 'openstacks01', 'blocks06', 'pegsol09', 'satellite01', 'miconic04', 'transport01', 'depot01', 'newspapers02', 'psr-small02', 'blocks08', 'psr-small06', 'psr-small07', 'pegsol06', 'tpp04', 'blocks02', 'blocks07', 'gripper02', 'blocks05']
+# sub_configs2 = [('f2', 'hdiff'), ('f2', 'hlength'), ('f2', 'hg'), ('f2', 'hnba'), ('f3', 'hmax'), ('f3', 'hdiff'), ('f3', 'hlength'), ('f3', 'hi'), ('f3', 'hg'), ('f3', 'hnba'), ('f4', 'hmax'), ('f4', 'hdiff'), ('f4', 'hlength'), ('f4', 'hi'), ('f4', 'hg'), ('f4', 'hnba'), ('f5', 'hdiff'), ('f5', 'hlength'), ('f5', 'hi'), ('f5', 'hg')]
+# sub_df2 = pd.concat([df.loc[(df.search==s) & (df.heuristic==h) & (df.is_non_optimal==1)] for (s, h) in sub_configs2], ignore_index=True)
+# print(len(pd.concat([df.loc[(df.search==s) & (df.heuristic==h) & (df.is_non_optimal==1) & (df.problem.isin(sub_problems2))] for (s, h) in sub_configs2], ignore_index=True)))
+# for p in sub_problems2:
+#     sub_df = df.loc[(df.problem==p) & (df.is_non_optimal==1)]
+#     non_optimal_configs_for_p = list(zip(sub_df['search'], sub_df['heuristic']))
+#     suspected_optimal_configs = [c for c in sub_configs2 if c not in non_optimal_configs_for_p]
+#     if suspected_optimal_configs != []:
+#         print(p, suspected_optimal_configs,
+#             'BUT:',
+#             [(s, h) for (s, h) in suspected_optimal_configs if not df.loc[(df.search==s) & (df.heuristic==h) & (df.problem==p)].empty])
