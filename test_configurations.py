@@ -37,9 +37,14 @@ def run_configuration(search: str, heuristic: str, domain_filename: str, problem
     """
     Runs a configuration, defined by a search and a heuristic, and returns the execution time.
     """
+    problem = re.compile('.+/(.+)_.+_.+.txt').match(output).group(1)
+
+    if os.path.exists(output):
+        print(f'{output} already exists. Execution canceled.')
+        return (problem, search, heuristic, 1.0)
+
     command = f'main.exe mutated_astar-{search} {heuristic} {domain_filename} {problem_filename} {output}'
     print(command)
-    problem = re.compile(".+/(.+)_.+_.+.txt").match(output).group(1)
     start_time = time.time()
     try:
         subprocess.run(command, stdout=subprocess.DEVNULL, timeout=timeout)
@@ -150,7 +155,7 @@ def main():
     argparser.add_argument('-k', '--keep_results', dest='keep_results', default=False, action='store_true')
     args = argparser.parse_args()
 
-    searches = ['f1', 'f2', 'f3', 'f4', 'f5']
+    searches = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6']
     heuristics = ['h_max', 'h_diff', 'h_state_length', 'h_distance_with_i', 'h_distance_with_g', 'h_nb_actions']
 
     # problems, my_args = get_arguments(searches, heuristics, args.problem_folder, args.nb_problems, args.timeout)
@@ -158,19 +163,19 @@ def main():
     # problems solved by the prolog oracle
     # problems = ['airport01', 'airport02', 'airport03', 'airport04', 'airport05', 'airport06', 'airport07', 'blocks01', 'blocks02', 'blocks03', 'blocks04', 'blocks05', 'blocks06', 'blocks07', 'blocks08', 'blocks09', 'depot01', 'gripper01', 'gripper02', 'logistics06', 'logistics08', 'miconic01', 'miconic02', 'miconic03', 'miconic04', 'miconic05', 'openstacks01', 'parcprinter01', 'parcprinter02', 'pegsol01', 'pegsol02', 'pegsol03', 'pegsol04', 'pegsol05', 'pegsol06', 'pegsol07', 'pegsol09', 'psr-small01', 'psr-small02', 'psr-small03', 'psr-small04', 'psr-small05', 'psr-small06', 'psr-small07', 'psr-small08', 'psr-small09', 'rovers01', 'rovers02', 'rovers04', 'satellite01', 'sokoban01', 'sokoban02', 'sokoban03', 'tpp01', 'tpp02', 'tpp03', 'tpp04', 'transport01', 'transport02', 'woodworking01']
     # problems solved by the pyperplan oracle
-    problems = ['airport01', 'airport02', 'airport03', 'airport04', 'airport05', 'airport06', 'airport07', 'airport08', 'blocks01', 'blocks02', 'blocks03', 'blocks04', 'blocks05', 'blocks06', 'blocks07', 'blocks08', 'blocks09', 'depot01', 'depot02', 'gripper01', 'gripper02', 'gripper03', 'gripper04', 'logistics01', 'logistics02', 'logistics03', 'logistics04', 'logistics05', 'logistics06', 'logistics08', 'miconic01', 'miconic02', 'miconic03', 'miconic04', 'miconic05', 'miconic06', 'movie01', 'movie02', 'movie03', 'movie04', 'movie05', 'movie06', 'movie07', 'movie08', 'movie09', 'newspapers01', 'newspapers02', 'newspapers03', 'openstacks01', 'openstacks02', 'openstacks03', 'parcprinter01', 'parcprinter02', 'parcprinter03', 'parcprinter04', 'pegsol01', 'pegsol02', 'pegsol03', 'pegsol04', 'pegsol05', 'pegsol06', 'pegsol07', 'pegsol08', 'pegsol09', 'psr-small01', 'psr-small02', 'psr-small03', 'psr-small04', 'psr-small05', 'psr-small06', 'psr-small07', 'psr-small08', 'psr-small09', 'rovers01', 'rovers02', 'rovers03', 'rovers04', 'satellite01', 'satellite02', 'satellite03', 'scanalyzer01', 'sokoban01', 'sokoban02', 'sokoban03', 'sokoban04', 'sokoban05', 'sokoban06', 'sokoban07', 'sokoban09', 'tpp01', 'tpp02', 'tpp03', 'tpp04', 'tpp05', 'transport01', 'transport02', 'travel02', 'travel03', 'travel04', 'travel05', 'travel06', 'travel07', 'travel08', 'woodworking01', 'woodworking02']
+    # problems = ['airport01', 'airport02', 'airport03', 'airport04', 'airport05', 'airport06', 'airport07', 'airport08', 'blocks01', 'blocks02', 'blocks03', 'blocks04', 'blocks05', 'blocks06', 'blocks07', 'blocks08', 'blocks09', 'depot01', 'depot02', 'gripper01', 'gripper02', 'gripper03', 'gripper04', 'logistics01', 'logistics02', 'logistics03', 'logistics04', 'logistics05', 'logistics06', 'logistics08', 'miconic01', 'miconic02', 'miconic03', 'miconic04', 'miconic05', 'miconic06', 'movie01', 'movie02', 'movie03', 'movie04', 'movie05', 'movie06', 'movie07', 'movie08', 'movie09', 'newspapers01', 'newspapers02', 'newspapers03', 'openstacks01', 'openstacks02', 'openstacks03', 'parcprinter01', 'parcprinter02', 'parcprinter03', 'parcprinter04', 'pegsol01', 'pegsol02', 'pegsol03', 'pegsol04', 'pegsol05', 'pegsol06', 'pegsol07', 'pegsol08', 'pegsol09', 'psr-small01', 'psr-small02', 'psr-small03', 'psr-small04', 'psr-small05', 'psr-small06', 'psr-small07', 'psr-small08', 'psr-small09', 'rovers01', 'rovers02', 'rovers03', 'rovers04', 'satellite01', 'satellite02', 'satellite03', 'scanalyzer01', 'sokoban01', 'sokoban02', 'sokoban03', 'sokoban04', 'sokoban05', 'sokoban06', 'sokoban07', 'sokoban09', 'tpp01', 'tpp02', 'tpp03', 'tpp04', 'tpp05', 'transport01', 'transport02', 'travel02', 'travel03', 'travel04', 'travel05', 'travel06', 'travel07', 'travel08', 'woodworking01', 'woodworking02']
     # plot3.csv
     # problems = ['blocks06', 'blocks07', 'blocks08', 'blocks09', 'depot01', 'gripper01', 'gripper02', 'miconic02', 'miconic03', 'miconic04', 'openstacks01', 'pegsol05', 'pegsol06', 'pegsol09', 'psr-small02', 'psr-small05', 'psr-small06', 'psr-small07', 'psr-small09', 'satellite01', 'sokoban02', 'tpp04', 'transport01']
+
+    problems = ['airport01', 'airport02', 'airport03', 'airport04', 'airport05', 'airport06', 'airport07', 'blocks01', 'blocks02', 'blocks03', 'blocks04', 'blocks05', 'blocks06', 'depot01', 'gripper01', 'gripper02', 'miconic01', 'miconic02', 'miconic03', 'miconic04', 'movie01', 'movie02', 'movie03', 'movie04', 'movie05', 'movie06', 'movie07', 'movie08', 'movie09', 'newspapers02', 'openstacks01', 'parcprinter01', 'parcprinter02', 'pegsol01', 'pegsol02', 'pegsol03', 'pegsol04', 'pegsol05', 'pegsol06', 'pegsol07', 'psr-small01', 'psr-small02', 'psr-small03', 'psr-small04', 'psr-small05', 'psr-small06', 'psr-small07', 'psr-small08', 'psr-small09', 'satellite01', 'sokoban03', 'tpp01', 'tpp02', 'tpp03', 'tpp04', 'transport01', 'travel02', 'travel03', 'travel06']
     my_args = get_arguments_from_problems(searches, heuristics, args.problem_folder, problems, args.timeout)
     print(f'{len(problems)} planning problems found. {len(my_args)} tasks computed.')
 
     pool = multiprocessing.Pool(processes=3)
     results = pool.starmap(run_configuration, my_args, chunksize=10)
 
-    if args.log:
-        log_results(results, args.timeout)
-
-    # problems = list(set([p.split('_')[0] for p in os.listdir('tmp')]))
+    # if args.log:
+    #     log_results(results, args.timeout)
 
     summarise_results(problems, searches, heuristics, args.results_filename, args.keep_results)
 
