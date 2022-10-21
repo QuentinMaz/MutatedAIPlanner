@@ -271,28 +271,28 @@ member_state_record(SR, [_|T]) :-
 
 %% f(+FFunction, +State, +NewState, +NewDepth, +H, -F).
 % implements the classical function found in WA* searches: f = g + 10 * h
-f(f1, _, _, Depth, H, F) :-
+f(f0, _, _, Depth, H, F) :-
     !,
     F is Depth + 10 * H.
 % implements what we call the best first f function: f = h
-f(f2, _, _, _, H, F) :-
+f(f1, _, _, _, H, F) :-
     !,
     F is H.
 % implements what we call the worst first f function: f = -h
-f(f3, _, _, _, H, F) :-
+f(f2, _, _, _, H, F) :-
     !,
     F is -H.
 % encourages the search to expand the deepest nodes (with the mitigation of h): f = -g + h
-f(f4, _, _, Depth, H, F) :-
+f(f3, _, _, Depth, H, F) :-
     !,
     F is -Depth + H.
 % scores the discovered state with h but 'discards' it by signing it with the parity of the current depth
-f(f5, _, _, Depth, H, F) :-
+f(f4, _, _, Depth, H, F) :-
     !,
     % #TODO: improve arithmetics
     F is integer((-1 ** (Depth mod 2)) * H).
 % combination of f4 and f5
-f(f6, _, _, Depth, H, F) :-
+f(f5, _, _, Depth, H, F) :-
     !,
     % #TODO: improve arithmetics
     F is -Depth + integer((-1 ** (Depth mod 2)) * H).

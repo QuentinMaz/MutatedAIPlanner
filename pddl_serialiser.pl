@@ -1,4 +1,4 @@
-:- module(pddl_serialiser, [serialise_plan/2]).
+:- module(pddl_serialiser, [serialise_plan/2, write_plan/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% SERIALISATION PREDICATE

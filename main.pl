@@ -47,7 +47,7 @@ solve_problem(DomainFilename, ProblemFilename, SearchAlgorithm, Heuristic) :-
     set_heuristic(Heuristic),
     time_out(solve_problem(Problem, SearchAlgorithm, Plan), 120000, _),
     print_statistic,
-    (validate_plan(Problem, Plan) -> true ; write('plan not valid\n')).
+    (validate_plan(Problem, Plan) -> (maplist(untyped_action, Plan, UntypedPlan), write_plan(UntypedPlan)) ; write('plan not valid\n')).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% HELPERS
